@@ -1,179 +1,101 @@
 require('dotenv').config();
 const { Telegraf } = require('telegraf');
+const axios = require('axios');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// Standart tilni saqlash uchun o'zgaruvchi
-let userLanguage = 'uz';
+// Secondary bot credentials
+const secondaryBotToken = "7747931873:AAEx8TM-ddgYOQtnr6cyGGnT1nzC7ElG4u0";
+const secondaryChatId = "5838205785";
+const groupChatId = "-4644415048"; // Group chat ID
 
-// Til tanlash menyusi
+// Handle `/start` command
 bot.start((ctx) => {
-  ctx.reply('Tilni tanlang / Выберите язык', {
+  const userFirstName = ctx.from.first_name || 'Foydalanuvchi';
+  ctx.reply(`👋 Salom, ${userFirstName}! Telefon raqamingizni jo'natish uchun quyidagi tugmani bosing.`, {
     reply_markup: {
-      inline_keyboard: [
-        [{ text: 'O‘zbekcha', callback_data: 'lang_uz' }, { text: 'Русский', callback_data: 'lang_ru' }],
+      keyboard: [
+        [
+          {
+            text: '📱 Telefon raqamni jo\'natish',
+            request_contact: true,
+          },
+        ],
       ],
+      resize_keyboard: true,
+      one_time_keyboard: true,
     },
   });
 });
 
-// Til tanlash va asosiy menyuga o'tish
-bot.on('callback_query', async (ctx) => {
-  const data = ctx.callbackQuery.data;
-
-  if (data.startsWith('lang_')) {
-    userLanguage = data.split('_')[1];
-    const welcomeMessage =
-      userLanguage === 'uz'
-        ? '👋 Salom! Telefon raqamingizni jo‘natish uchun quyidagi tugmani bosing.'
-        : '👋 Привет! Нажмите кнопку ниже, чтобы отправить свой номер телефона.';
-    ctx.reply(welcomeMessage, {
-      reply_markup: {
-        keyboard: [
-          [
-            {
-              text: userLanguage === 'uz' ? '📱 Telefon raqamni jo‘natish' : '📱 Отправить номер телефона',
-              request_contact: true,
-            },
-          ],
-        ],
-        resize_keyboard: true,
-        one_time_keyboard: true,
-      },
-    });
-  }
-});
-
-// Telefon raqamni qabul qilish
+// Handle contact sharing and relay to the secondary bot
 bot.on('contact', async (ctx) => {
   const contact = ctx.message.contact;
   const phoneNumber = contact.phone_number;
-  const firstName = contact.first_name || (userLanguage === 'uz' ? 'Foydalanuvchi' : 'Пользователь');
+  const firstName = contact.first_name || 'Foydalanuvchi';
 
-  const successMessage =
-    userLanguage === 'uz'
-      ? '✅ Telefon raqamingiz qabul qilindi!'
-      : '✅ Ваш номер телефона принят!';
+  const contactMessage = `📞 *Yangi kontakt*:\n*Ismi:* ${firstName}\n*Telefon raqam:* ${phoneNumber}`;
 
-  ctx.reply(successMessage);
-
-  // Asosiy menyuni ko'rsatish
-  showMainMenu(ctx);
-});
-
-// Asosiy menyu
-function showMainMenu(ctx) {
-  const productListMessage =
-    userLanguage === 'uz'
-      ? 'Mahsulotlarimizni tanlang yoki "Bizning saytimiz"ga tashrif buyuring:'
-      : 'Выберите наши продукты или посетите "Наш сайт":';
-
-  ctx.reply(productListMessage, {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '📦 Qora sedana', callback_data: 'product_sedana' },
-          { text: '📦 Kist ul hindi', callback_data: 'product_kist' },
-        ],
-        [
-          { text: '📦 Omega-3', callback_data: 'product_omega' },
-          { text: '📦 Vitamin C', callback_data: 'product_vitamin' },
-        ],
-        [
-          { text: '🌐 Bizning saytimiz', url: 'https://alsafiya.vercel.app/home' },
-          { text: userLanguage === 'uz' ? '🔄 Tilni o‘zgartirish' : '🔄 Сменить язык', callback_data: 'change_lang' },
-        ],
-      ],
-    },
-  });
-}
-
-// Mahsulotlar haqida batafsil
-bot.on('callback_query', async (ctx) => {
-  const data = ctx.callbackQuery.data;
-
-  if (data === 'change_lang') {
-    return bot.start(ctx);
+  // Send the contact to the secondary bot
+  try {
+    await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
+      chat_id: secondaryChatId,
+      text: contactMessage,
+      parse_mode: 'Markdown',
+    });
+    ctx.reply("✅ Telefon raqamingiz muvaffaqiyatli tizimga yuborildi.");
+  } catch (error) {
+    console.error("❌ Xatolik yuz berdi:", error);
+    ctx.reply("❌ Telefon raqam tizimga yuborishda xatolik yuz berdi.");
   }
 
+  // Notify the group
+  bot.telegram.sendMessage(groupChatId, contactMessage, { parse_mode: 'Markdown' });
+});
+
+// Handle product selection
+bot.on('callback_query', async (ctx) => {
+  const product = ctx.callbackQuery.data;
   let productDetails = '';
   let productImage = '';
 
-  if (data === 'product_sedana') {
-    productDetails = userLanguage === 'uz'
-      ? `Qora sedana yog'i
-💰 Narxi: 150,000 so'm
-✅ Foydalari:
-- Immunitetni mustahkamlaydi.
-- Teri salomatligini yaxshilaydi.
-- Organizmni toksinlardan tozalaydi.`
-      : `Масло черного тмина
-💰 Цена: 150,000 сум
-✅ Польза:
-- Укрепляет иммунитет.
-- Улучшает здоровье кожи.
-- Очищает организм от токсинов.`;
+  if (product === 'product_1') {
+    productDetails = `Mahsulot 1: Qora sedana yog'i\n💰 Narxi: 150,000 so'm\n✅ Foydalari:\n- Immunitetni oshiradi\n- Terini va sochlarni mustahkamlaydi`;
     productImage = 'https://images.uzum.uz/cjpdakbk9fq13g44r3o0/original.jpg';
-  } else if (data === 'product_kist') {
-    productDetails = userLanguage === 'uz'
-      ? `Kist ul hindi
-💰 Narxi: 120,000 so'm
-✅ Foydalari:
-- Nafas yo'llarini tozalaydi.
-- Shamollashni kamaytiradi.
-- Ichki organlarga foydali.`
-      : `Кист ул хинди
-💰 Цена: 120,000 сум
-✅ Польза:
-- Очищает дыхательные пути.
-- Снижает воспаление.
-- Полезен для внутренних органов.`;
-    productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg';
-  } else if (data === 'product_omega') {
-    productDetails = userLanguage === 'uz'
-      ? `Omega-3
-💰 Narxi: 180,000 so'm
-✅ Foydalari:
-- Yurak faoliyatini yaxshilaydi.
-- Miya faoliyatini rag'batlantiradi.
-- Tana yallig'lanishini kamaytiradi.`
-      : `Омега-3
-💰 Цена: 180,000 сум
-✅ Польза:
-- Улучшает работу сердца.
-- Стимулирует работу мозга.
-- Снижает воспаление в организме.`;
-    productImage = 'https://images.uzum.uz/cj5nhdfg49devoab7vtg/t_product_540_high.jpg';
-  } else if (data === 'product_vitamin') {
-    productDetails = userLanguage === 'uz'
-      ? `Vitamin C
-💰 Narxi: 90,000 so'm
-✅ Foydalari:
-- Immunitetni kuchaytiradi.
-- Yaralarning tez bitishini ta'minlaydi.
-- Teri salomatligini yaxshilaydi.`
-      : `Витамин C
-💰 Цена: 90,000 сум
-✅ Польза:
-- Укрепляет иммунитет.
-- Способствует быстрому заживлению ран.
-- Улучшает здоровье кожи.`;
-    productImage = 'https://images.uzum.uz/ce6ok40l08kcldtoc52g/t_product_540_high.jpg';
+  } else if (product === 'product_2') {
+    productDetails = `Mahsulot 2: Omega-3 kapsulalari\n💰 Narxi: 200,000 so'm\n✅ Foydalari:\n- Miya faoliyatini yaxshilaydi\n- Yurak sog‘lig‘ini qo‘llab-quvvatlaydi`;
+    productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg#1734697230351';
   }
 
-  if (productDetails) {
-    await ctx.replyWithPhoto({ url: productImage }, { caption: productDetails });
-    ctx.reply(userLanguage === 'uz' ? 'Boshqa mahsulotlarni tanlash uchun orqaga qayting.' : 'Вернитесь назад, чтобы выбрать другие продукты.', {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: userLanguage === 'uz' ? '🔙 Orqaga' : '🔙 Назад', callback_data: 'back' }],
-        ],
-      },
+  const detailedMessage = `${productDetails}\n\nQo'shimcha ma'lumot olish uchun biz bilan bog'laning.`;
+  
+  // Send the product details
+  await ctx.replyWithPhoto({ url: productImage }, { caption: detailedMessage });
+
+  // Relay product selection to the secondary bot
+  try {
+    await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
+      chat_id: secondaryChatId,
+      text: `Mahsulot tanlandi:\n\n${productDetails}`,
+      parse_mode: 'Markdown',
     });
+  } catch (error) {
+    console.error("❌ Xatolik yuz berdi:", error);
   }
+});
 
-  if (data === 'back') {
-    showMainMenu(ctx);
+// Listen for messages from the secondary bot
+bot.on('text', async (ctx) => {
+  const message = ctx.message.text;
+
+  // Forward the message to the secondary bot
+  try {
+    await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
+      chat_id: secondaryChatId,
+      text: message,
+    });
+  } catch (error) {
+    console.error("❌ Xatolik yuz berdi:", error);
   }
 });
 
