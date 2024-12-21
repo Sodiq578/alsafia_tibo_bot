@@ -4,167 +4,228 @@ const axios = require('axios');
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// Secondary bot credentials
+// Ikkinchi bot tokeni
 const secondaryBotToken = "7747931873:AAEx8TM-ddgYOQtnr6cyGGnT1nzC7ElG4u0";
 const secondaryChatId = "5838205785";
-const groupChatId = "-4644415048"; // Group chat ID
+const groupChatId = "-4644415048"; // Guruh chat ID
 
-// User phone numbers and language preferences
+// Foydalanuvchi telefon raqami saqlash uchun (xotira)
 const userPhones = new Map();
-const userLanguages = new Map(); // Stores user language preferences
 
-// Default language
-const DEFAULT_LANGUAGE = 'uz';
+// Tilni saqlash (default: uz)
+const userLanguages = new Map();
 
-const messages = {
+// Tilni o'zgartirish
+const LANGUAGES = {
   uz: {
-    start: "\uD83D\uDC4B Salom, {{name}}! Telefon raqamingizni jo'natish uchun quyidagi tugmani bosing.",
-    phoneSaved: "\u2705 Telefon raqamingiz tizimga muvaffaqiyatli qabul qilindi.",
-    phoneAlreadySaved: "📱 Telefon raqamingiz allaqachon tizimga kiritilgan.",
-    catalog: "Tovarlarimizni tanlang:",
-    restart: "Qayta boshlash uchun /start ni bosing.",
-    languageSelection: "Tilni tanlang:",
-    uzbek: "O'zbek tili",
-    english: "Ingliz tili",
-    contactError: "Telefon raqamni qabul qilishda xatolik yuz berdi.",
+    startMessage: "👋 Salom, {name}! Telefon raqamingizni jo'natish uchun quyidagi tugmani bosing.",
+    phoneRequest: "📱 Telefon raqamni jo'natish",
+    phoneReceived: "✅ Telefon raqamingiz tizimga muvaffaqiyatli qabul qilindi.",
+    mainMenu: "Quyidagi tugmalardan birini tanlang:",
+    catalog: "Tovarlarimiz",
+    changeLanguage: "tilni o'zgartiris",
+    website: "Bizning saytimiz",
+    restart: "Qayta boshlash",
+    productDetails: "Mahsulot haqida ma'lumot",
+    productMessage: "Mahsulot 1: Qora sedana yog'i\n💰 Narxi: 150,000 so'm\n✅ Foydalari:\n- Immunitetni oshiradi\n- Terini va sochlarni mustahkamlaydi",
+  },
+  ru: {
+    startMessage: "👋 Привет, {name}! Нажмите кнопку ниже, чтобы отправить ваш номер телефона.",
+    phoneRequest: "📱 Отправить номер телефона",
+    phoneReceived: "✅ Ваш номер телефона успешно принят в систему.",
+    mainMenu: "Выберите одну из кнопок:",
+    catalog: "Наши товары",
+    changeLanguage: "Сменить язык",
+    website: "Наш сайт",
+    restart: "Перезапустить",
+    productDetails: "Информация о товаре",
+    productMessage: "Товар 1: Черный седана масло\n💰 Цена: 150,000 сум\n✅ Польза:\n- Укрепляет иммунитет\n- Укрепляет кожу и волосы",
   },
   en: {
-    start: "\uD83D\uDC4B Hello, {{name}}! Please send your phone number by pressing the button below.",
-    phoneSaved: "\u2705 Your phone number has been successfully registered in the system.",
-    phoneAlreadySaved: "📱 Your phone number is already saved.",
-    catalog: "Select a product:",
-    restart: "Please type /start to restart.",
-    languageSelection: "Select a language:",
-    uzbek: "Uzbek",
-    english: "English",
-    contactError: "Error occurred while saving your phone number.",
-  },
+    startMessage: "👋 Hello, {name}! Click the button below to send your phone number.",
+    phoneRequest: "📱 Send phone number",
+    phoneReceived: "✅ Your phone number has been successfully accepted.",
+    mainMenu: "Choose one of the options:",
+    catalog: "Our Products",
+    changeLanguage: "Change Language",
+    website: "Our Website",
+    restart: "Restart",
+    productDetails: "Product Information",
+    productMessage: "Product 1: Black Sedana Oil\n💰 Price: 150,000 som\n✅ Benefits:\n- Boosts immunity\n- Strengthens skin and hair",
+  }
 };
 
-// Get message in user's preferred language
-function getMessage(userId, key) {
-  const language = userLanguages.get(userId) || DEFAULT_LANGUAGE;
-  return messages[language][key];
-}
-
-// Handle `/start` command
+// /start komandasini boshqarish
 bot.start((ctx) => {
   const userId = ctx.from.id;
+  const userName = ctx.from.first_name || "Foydalanuvchi"; // Ismi bo'lmasa, "Foydalanuvchi" deb belgilaymiz
+  const language = userLanguages.get(userId) || 'uz'; // Standart til - uzbekcha
 
-  // Check if the phone number is already saved
-  if (userPhones.has(userId)) {
-    return showMainMenu(ctx);
+  if (!userPhones.has(userId)) {
+    // Agar telefon raqami hali saqlanmagan bo'lsa
+    ctx.reply(
+      LANGUAGES[language].startMessage.replace("{name}", userName),
+      {
+        reply_markup: {
+          keyboard: [
+            [
+              {
+                text: LANGUAGES[language].phoneRequest,
+                request_contact: true,
+              },
+            ],
+          ],
+          resize_keyboard: true,
+          one_time_keyboard: true,
+        },
+      }
+    );
+  } else {
+    // Telefon raqami allaqachon mavjud bo'lsa
+    showMainMenu(ctx, language);
   }
-
-  // Send the initial message with the phone request
-  ctx.reply(getMessage(userId, 'start').replace('{{name}}', ctx.from.first_name || 'User'), {
-    reply_markup: {
-      keyboard: [
-        [
-          {
-            text: '📱 Telefon raqamni jo\'natish',
-            request_contact: true,
-          },
-        ],
-      ],
-      resize_keyboard: true,
-      one_time_keyboard: true,
-    },
-  });
 });
 
-// Handle phone number submission
+// Telefon raqamini qabul qilish va boshqa botga yuborish
 bot.on('contact', async (ctx) => {
   const userId = ctx.from.id;
   const contact = ctx.message.contact;
   const phoneNumber = contact.phone_number;
+  const firstName = contact.first_name || 'Foydalanuvchi';
 
-  // If phone number is not already saved
+  const language = userLanguages.get(userId) || 'uz'; // Standart til - uzbekcha
+
   if (!userPhones.has(userId)) {
+    // Telefon raqamini saqlash
     userPhones.set(userId, phoneNumber);
 
-    const contactMessage = `📞 *Yangi kontakt*:\n*Ismi:* ${contact.first_name}\n*Telefon raqam:* ${phoneNumber}`;
-
+    // Raqamni boshqa botga yuborish
     try {
       await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
         chat_id: secondaryChatId,
-        text: contactMessage,
+        text: `📞 *Yangi kontakt*:\n*Ismi:* ${firstName}\n*Telefon raqam:* ${phoneNumber}`,
         parse_mode: 'Markdown',
       });
-
-      ctx.reply(getMessage(userId, 'phoneSaved'));
+      ctx.reply(LANGUAGES[language].phoneReceived);
     } catch (error) {
       console.error("❌ Xatolik yuz berdi:", error);
-      return ctx.reply(getMessage(userId, 'contactError'));
+      ctx.reply("❌ Telefon raqam tizimga yuborishda xatolik yuz berdi.");
     }
 
-    bot.telegram.sendMessage(groupChatId, contactMessage, { parse_mode: 'Markdown' });
-    showMainMenu(ctx);
+    // Guruhga yuborish
+    bot.telegram.sendMessage(groupChatId, `📞 *Yangi kontakt*:\n*Ismi:* ${firstName}\n*Telefon raqam:* ${phoneNumber}`, { parse_mode: 'Markdown' });
+
+    // Asosiy menyuni ko'rsatish
+    showMainMenu(ctx, language);
   } else {
-    ctx.reply(getMessage(userId, 'phoneAlreadySaved'));
-    showMainMenu(ctx);
+    ctx.reply("✅ Telefon raqamingiz allaqachon saqlangan.");
+    showMainMenu(ctx, language);
   }
 });
 
-// Show main menu
-function showMainMenu(ctx) {
-  const userId = ctx.from.id;
-  ctx.reply(getMessage(userId, 'catalog'), {
+// Asosiy menyu (telefon raqami saqlangandan keyin)
+function showMainMenu(ctx, language) {
+  ctx.reply(LANGUAGES[language].mainMenu, {
+    reply_markup: {
+      keyboard: [
+        [
+          { text: LANGUAGES[language].catalog, callback_data: 'catalog' },
+          { text: LANGUAGES[language].changeLanguage, callback_data: 'change_language' },
+        ],
+        [
+          { text: LANGUAGES[language].website, callback_data: 'website' },
+          { text: LANGUAGES[language].restart, callback_data: 'home' },
+        ],
+      ],
+      resize_keyboard: true,
+    },
+  });
+}
+
+// Mahsulotlarni ko'rsatish
+function showCatalog(ctx, language) {
+  ctx.reply(LANGUAGES[language].productDetails, {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '📦 Tovarlarimiz', callback_data: 'catalog' },
+          { text: LANGUAGES[language].productMessage, callback_data: 'product_1' },
         ],
         [
-          { text: '🌐 Tilni o\'zgartirish', callback_data: 'change_language' },
+          { text: "Mahsulot 2", callback_data: 'product_2' },
         ],
         [
-          { text: '🔄 Qayta boshlash', callback_data: 'home' },
+          { text: "Mahsulot 3", callback_data: 'product_3' },
         ],
         [
-          { text: '🌐 Bizning saytimiz', url: 'https://example.com' },
+          { text: "Mahsulot 4", callback_data: 'product_4' },
+        ],
+        [
+          { text: "Mahsulot 5", callback_data: 'product_5' },
+        ],
+        [
+          { text: LANGUAGES[language].restart, callback_data: 'restart' },
         ],
       ],
     },
   });
 }
 
-// Handle callback queries
+// Mahsulotni tanlash
 bot.on('callback_query', async (ctx) => {
-  const userId = ctx.from.id;
-  const data = ctx.callbackQuery.data;
+  const product = ctx.callbackQuery.data;
+  const language = userLanguages.get(ctx.from.id) || 'uz'; // Standart til - uzbekcha
+  let productDetails, productImage;
 
-  if (data === 'catalog') {
-    return ctx.reply("📦 Tovarlarimiz ro'yxatini hozirda ishlayapmiz.");
-  } else if (data === 'change_language') {
-    return ctx.reply(getMessage(userId, 'languageSelection'), {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: getMessage(userId, 'uzbek'), callback_data: 'lang_uz' },
-            { text: getMessage(userId, 'english'), callback_data: 'lang_en' },
-          ],
+  if (product === 'product_1') {
+    productDetails = `Mahsulot 1: Qora sedana yog'i\n💰 Narxi: 150,000 so'm\n✅ Foydalari:\n- Immunitetni oshiradi\n- Terini va sochlarni mustahkamlaydi`;
+    productImage = 'https://images.uzum.uz/cjpdakbk9fq13g44r3o0/original.jpg';
+  } else if (product === 'product_2') {
+    productDetails = `Mahsulot 2: Omega-3 kapsulalari\n💰 Narxi: 200,000 so'm\n✅ Foydalari:\n- Miya faoliyatini yaxshilaydi\n- Yurak sog‘lig‘ini qo‘llab-quvvatlaydi`;
+    productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg';
+  } else if (product === 'product_3') {
+    productDetails = `Mahsulot 3: Vitamin C\n💰 Narxi: 100,000 so'm\n✅ Foydalari:\n- Immunitetni oshiradi\n- Terini yangilaydi`;
+    productImage = 'https://example.com/product3.jpg'; // Tasvirni o'zgartiring
+  } else if (product === 'product_4') {
+    productDetails = `Mahsulot 4: Tabiiy choy\n💰 Narxi: 50,000 so'm\n✅ Foydalari:\n- Stressni kamaytiradi\n- Energiya beradi`;
+    productImage = 'https://example.com/product4.jpg'; // Tasvirni o'zgartiring
+  } else if (product === 'product_5') {
+    productDetails = `Mahsulot 5: Aloe Vera\n💰 Narxi: 75,000 so'm\n✅ Foydalari:\n- Terini namlaydi\n- Yallig'lanishni kamaytiradi`;
+    productImage = 'https://example.com/product5.jpg'; // Tasvirni o'zgartiring
+  }
+
+  await ctx.reply(productDetails, {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: LANGUAGES[language].restart, callback_data: 'restart' },
         ],
-      },
-    });
-  } else if (data === 'home') {
-    return ctx.reply(getMessage(userId, 'restart'));
+      ],
+    },
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true,
+  });
+
+  // Mahsulot rasmni yuborish
+  if (productImage) {
+    await ctx.replyWithPhoto(productImage);
   }
 });
 
+// Tilni o'zgartirish
 bot.on('callback_query', (ctx) => {
+  const action = ctx.callbackQuery.data;
   const userId = ctx.from.id;
-  const data = ctx.callbackQuery.data;
 
-  if (data === 'lang_uz') {
-    userLanguages.set(userId, 'uz');
-    ctx.reply("✅ Til o'zgartirildi: O'zbek tili");
-  } else if (data === 'lang_en') {
-    userLanguages.set(userId, 'en');
-    ctx.reply("✅ Language changed: English");
+  if (action === 'change_language') {
+    const currentLanguage = userLanguages.get(userId) || 'uz';
+    const newLanguage = currentLanguage === 'uz' ? 'ru' : currentLanguage === 'ru' ? 'en' : 'uz';
+    userLanguages.set(userId, newLanguage);
+
+    const languageMessage = LANGUAGES[newLanguage].startMessage.replace("{name}", ctx.from.first_name || 'Foydalanuvchi');
+    ctx.reply(languageMessage);
   }
 });
 
-// Launch bot
+// Botni ishga tushirish
 bot.launch();
 console.log('Bot ishga tushdi!');
