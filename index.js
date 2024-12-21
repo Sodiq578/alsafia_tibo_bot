@@ -9,150 +9,162 @@ const secondaryBotToken = "7747931873:AAEx8TM-ddgYOQtnr6cyGGnT1nzC7ElG4u0";
 const secondaryChatId = "5838205785";
 const groupChatId = "-4644415048"; // Group chat ID
 
-// Foydalanuvchi telefon raqami saqlash uchun (xotira)
+// User phone numbers and language preferences
 const userPhones = new Map();
+const userLanguages = new Map(); // Stores user language preferences
+
+// Default language
+const DEFAULT_LANGUAGE = 'uz';
+
+const messages = {
+  uz: {
+    start: "\uD83D\uDC4B Salom, {{name}}! Telefon raqamingizni jo'natish uchun quyidagi tugmani bosing.",
+    phoneSaved: "\u2705 Telefon raqamingiz tizimga muvaffaqiyatli qabul qilindi.",
+    phoneAlreadySaved: "📱 Telefon raqamingiz allaqachon tizimga kiritilgan.",
+    catalog: "Tovarlarimizni tanlang:",
+    restart: "Qayta boshlash uchun /start ni bosing.",
+    languageSelection: "Tilni tanlang:",
+    uzbek: "O'zbek tili",
+    english: "Ingliz tili",
+    contactError: "Telefon raqamni qabul qilishda xatolik yuz berdi.",
+  },
+  en: {
+    start: "\uD83D\uDC4B Hello, {{name}}! Please send your phone number by pressing the button below.",
+    phoneSaved: "\u2705 Your phone number has been successfully registered in the system.",
+    phoneAlreadySaved: "📱 Your phone number is already saved.",
+    catalog: "Select a product:",
+    restart: "Please type /start to restart.",
+    languageSelection: "Select a language:",
+    uzbek: "Uzbek",
+    english: "English",
+    contactError: "Error occurred while saving your phone number.",
+  },
+};
+
+// Get message in user's preferred language
+function getMessage(userId, key) {
+  const language = userLanguages.get(userId) || DEFAULT_LANGUAGE;
+  return messages[language][key];
+}
 
 // Handle `/start` command
 bot.start((ctx) => {
   const userId = ctx.from.id;
 
-  if (!userPhones.has(userId)) {
-    // Agar telefon raqami hali yo'q bo'lsa
-    ctx.reply(
-      `👋 Salom, ${ctx.from.first_name || 'Foydalanuvchi'}! Telefon raqamingizni jo'natish uchun quyidagi tugmani bosing.`,
-      {
-        reply_markup: {
-          keyboard: [
-            [
-              {
-                text: '📱 Telefon raqamni jo\'natish',
-                request_contact: true,
-              },
-            ],
-          ],
-          resize_keyboard: true,
-          one_time_keyboard: true,
-        },
-      }
-    );
-  } else {
-    // Telefon raqami allaqachon mavjud bo'lsa
-    showCatalog(ctx);
+  // Check if the phone number is already saved
+  if (userPhones.has(userId)) {
+    return showMainMenu(ctx);
   }
+
+  // Send the initial message with the phone request
+  ctx.reply(getMessage(userId, 'start').replace('{{name}}', ctx.from.first_name || 'User'), {
+    reply_markup: {
+      keyboard: [
+        [
+          {
+            text: '📱 Telefon raqamni jo\'natish',
+            request_contact: true,
+          },
+        ],
+      ],
+      resize_keyboard: true,
+      one_time_keyboard: true,
+    },
+  });
 });
 
-// Telefon raqamni qabul qilish va boshqa botga yuborish
+// Handle phone number submission
 bot.on('contact', async (ctx) => {
   const userId = ctx.from.id;
   const contact = ctx.message.contact;
   const phoneNumber = contact.phone_number;
-  const firstName = contact.first_name || 'Foydalanuvchi';
 
+  // If phone number is not already saved
   if (!userPhones.has(userId)) {
-    // Telefon raqamini saqlash
     userPhones.set(userId, phoneNumber);
 
-    const contactMessage = `📞 *Yangi kontakt*:\n*Ismi:* ${firstName}\n*Telefon raqam:* ${phoneNumber}`;
-    
-    // Raqamni boshqa botga yuborish
+    const contactMessage = `📞 *Yangi kontakt*:\n*Ismi:* ${contact.first_name}\n*Telefon raqam:* ${phoneNumber}`;
+
     try {
       await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
         chat_id: secondaryChatId,
         text: contactMessage,
         parse_mode: 'Markdown',
       });
-      ctx.reply("✅ Telefon raqamingiz tizimga muvaffaqiyatli qabul qilindi.");
+
+      ctx.reply(getMessage(userId, 'phoneSaved'));
     } catch (error) {
       console.error("❌ Xatolik yuz berdi:", error);
-      ctx.reply("❌ Telefon raqam tizimga yuborishda xatolik yuz berdi.");
+      return ctx.reply(getMessage(userId, 'contactError'));
     }
 
-    // Guruhga yuborish
     bot.telegram.sendMessage(groupChatId, contactMessage, { parse_mode: 'Markdown' });
-
-    // Katalogni ko'rsatish
-    showCatalog(ctx);
+    showMainMenu(ctx);
   } else {
-    ctx.reply("✅ Telefon raqamingiz allaqachon saqlangan.");
-    showCatalog(ctx);
+    ctx.reply(getMessage(userId, 'phoneAlreadySaved'));
+    showMainMenu(ctx);
   }
 });
 
-// Katalogni ko'rsatish
-function showCatalog(ctx) {
-  ctx.reply('Mahsulotlarimizni tanlang yoki "Qayta boshlash" tugmasidan foydalaning:', {
+// Show main menu
+function showMainMenu(ctx) {
+  const userId = ctx.from.id;
+  ctx.reply(getMessage(userId, 'catalog'), {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: '📦 Mahsulot 1', callback_data: 'product_1' },
-          { text: '📦 Mahsulot 2', callback_data: 'product_2' },
+          { text: '📦 Tovarlarimiz', callback_data: 'catalog' },
         ],
         [
-          { text: '📦 Mahsulot 3', callback_data: 'product_3' },
-          { text: '📦 Mahsulot 4', callback_data: 'product_4' },
+          { text: '🌐 Tilni o\'zgartirish', callback_data: 'change_language' },
         ],
         [
-          { text: '📦 Mahsulot 5', callback_data: 'product_5' },
+          { text: '🔄 Qayta boshlash', callback_data: 'home' },
         ],
         [
-          { text: '🔄 Qayta boshlash', callback_data: 'restart' },
+          { text: '🌐 Bizning saytimiz', url: 'https://example.com' },
         ],
       ],
     },
   });
 }
 
-// Mahsulotni tanlash
+// Handle callback queries
 bot.on('callback_query', async (ctx) => {
-  const product = ctx.callbackQuery.data;
+  const userId = ctx.from.id;
+  const data = ctx.callbackQuery.data;
 
-  if (product === 'restart') {
-    return ctx.reply('/start ni bosib qayta boshlang.');
-  }
-
-  let productDetails = '';
-  let productImage = '';
-
-  if (product === 'product_1') {
-    productDetails = `Mahsulot 1: Qora sedana yog'i\n💰 Narxi: 150,000 so'm\n✅ Foydalari:\n- Immunitetni oshiradi\n- Terini va sochlarni mustahkamlaydi`;
-    productImage = 'https://images.uzum.uz/cjpdakbk9fq13g44r3o0/original.jpg';
-  } else if (product === 'product_2') {
-    productDetails = `Mahsulot 2: Omega-3 kapsulalari\n💰 Narxi: 200,000 so'm\n✅ Foydalari:\n- Miya faoliyatini yaxshilaydi\n- Yurak sog‘lig‘ini qo‘llab-quvvatlaydi`;
-    productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg#1734697230351';
-  }
-
-  const detailedMessage = `${productDetails}\n\nQo'shimcha ma'lumot uchun biz bilan bog'laning.`;
-
-  // Mahsulot haqida ma'lumot yuborish
-  await ctx.replyWithPhoto({ url: productImage }, { caption: detailedMessage });
-
-  // Mahsulotni boshqa botga yuborish
-  try {
-    await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
-      chat_id: secondaryChatId,
-      text: `Mahsulot tanlandi:\n\n${productDetails}`,
-      parse_mode: 'Markdown',
+  if (data === 'catalog') {
+    return ctx.reply("📦 Tovarlarimiz ro'yxatini hozirda ishlayapmiz.");
+  } else if (data === 'change_language') {
+    return ctx.reply(getMessage(userId, 'languageSelection'), {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: getMessage(userId, 'uzbek'), callback_data: 'lang_uz' },
+            { text: getMessage(userId, 'english'), callback_data: 'lang_en' },
+          ],
+        ],
+      },
     });
-  } catch (error) {
-    console.error("❌ Xatolik yuz berdi:", error);
+  } else if (data === 'home') {
+    return ctx.reply(getMessage(userId, 'restart'));
   }
 });
 
-// Foydalanuvchi xabarini boshqa botga yuborish va aksincha
-bot.on('text', async (ctx) => {
-  const message = ctx.message.text;
+bot.on('callback_query', (ctx) => {
+  const userId = ctx.from.id;
+  const data = ctx.callbackQuery.data;
 
-  // Xabarni boshqa botga yuborish
-  try {
-    await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
-      chat_id: secondaryChatId,
-      text: message,
-    });
-  } catch (error) {
-    console.error("❌ Xatolik yuz berdi:", error);
+  if (data === 'lang_uz') {
+    userLanguages.set(userId, 'uz');
+    ctx.reply("✅ Til o'zgartirildi: O'zbek tili");
+  } else if (data === 'lang_en') {
+    userLanguages.set(userId, 'en');
+    ctx.reply("✅ Language changed: English");
   }
 });
 
-// Botni ishga tushirish
+// Launch bot
 bot.launch();
 console.log('Bot ishga tushdi!');
