@@ -90,13 +90,17 @@ function showCatalog(ctx) {
         ],
         [
           { text: '📦 Omega 3', callback_data: 'product_3' },
-          { text: '📦 Qora Sedana', callback_data: 'product_4' },
-        ],
-        [
           { text: '📦 Mijozlar fikri', callback_data: 'product_5' },
         ],
         [
-          { text: '🔄 Qayta boshlash', callback_data: 'restart' },
+          { text: '🌐 Bizning saytimiz', url: 'https://alsafiya.vercel.app/home' }, // Sayt tugmasi
+        ],
+        [
+          { text: '🔄 Botni qayta ishga tushirish', callback_data: 'restart' },
+        ],
+        
+        [
+          { text: '📞 Xoziroq qoniroq qilish', callback_data: 'product_6' },
         ],
       ],
     },
@@ -118,19 +122,23 @@ bot.on('callback_query', async (ctx) => {
     productDetails = `Mahsulot 1: Qora sedana yog'i\n💰 Narxi: 150,000 so'm\n✅ Foydalari:\n- Immunitetni oshiradi\n- Terini va sochlarni mustahkamlaydi`;
     productImage = 'https://images.uzum.uz/cjpdakbk9fq13g44r3o0/original.jpg';
   } else if (product === 'product_2') {
-    productDetails = `Mahsulot 2: Omega-3 kapsulalari\n💰 Narxi: 200,000 so'm\n✅ Foydalari:\n- Miya faoliyatini yaxshilaydi\n- Yurak sog‘lig‘ini qo‘llab-quvvatlaydi`;
+    productDetails = `Mahsulot 2: Kist ul hindi\n💰 Narxi: 200,000 so'm\n✅ Foydalari:\n- Nafas olish tizimini qo'llab-quvvatlaydi\n- Oqsilni yaxshiroq hazm qiladi`;
     productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg#1734697230351';
-  }else if (product === 'product_4') {
-    productDetails = `Mahsulot 4: Omega-3\n💰 Narxi: 180,000 so'm\n✅ Foydalari:\n- Yurakni mustahkamlaydi\n- Miya va ko'rish faoliyatini yaxshilaydi`;
-    productImage = 'https://images.uzum.uz/someImage.jpg'; // Bu erda haqiqiy rasm manzilini joylashtiring else if (product === 'product_5') {
-    productDetails = `Mahsulot 5: Mijozlar fikri va sharhlar`;
+  } else if (product === 'product_3') {
+    productDetails = `Mahsulot 3: Omega-3 kapsulalari\n💰 Narxi: 180,000 so'm\n✅ Foydalari:\n- Yurakni mustahkamlaydi\n- Miya va ko'rish faoliyatini yaxshilaydi\n- Qon bosimini me'yorlashtiradi`;
+    productImage = 'https://images.uzum.uz/ci5hkal40v9pplt3ub3g/original.jpg';
+  } else if (product === 'product_5') {
+    productDetails = `Mahsulot 5: Mijozlar fikri va sharhlar\n💡 Fikr va mulohazalarni shu yerda ko'ring.`;
+    productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg#1734697230351';
+  } else if (product === 'product_6') {
+    productDetails = `📞 +998 (55) 500-02-05`;
     productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg#1734697230351';
   }
+  
 
   // Mahsulot haqida xabar va tasvirni yuborish
   try {
-    const imageBuffer = fs.readFileSync('./mijozFikir8.jpg');
-    await ctx.replyWithPhoto({ source: imageBuffer }, { caption: productDetails });
+    await ctx.replyWithPhoto(productImage, { caption: productDetails });
   } catch (error) {
     console.error("❌ Xatolik yuz berdi:", error);
   }
@@ -149,15 +157,27 @@ bot.on('callback_query', async (ctx) => {
   }
 });
 
-// Foydalanuvchi xabarini boshqa botga yuborish va aksincha
+// Foydalanuvchi xabarini boshqa botga yuborish
 bot.on('text', async (ctx) => {
   const message = ctx.message.text;
+
+  // Hozirgi sanani va vaqtni olish
+  const now = new Date();
+  const hours = now.getHours().toString().padStart(2, '0'); // Soat
+  const minutes = now.getMinutes().toString().padStart(2, '0'); // Daqiqalar
+  const day = now.getDate(); // Kun
+  const month = now.toLocaleString('default', { month: 'long' }); // Oylik nom
+  const year = now.getFullYear(); // Yil
+  const weekday = now.toLocaleString('default', { weekday: 'long' }); // Hafta kuni
+
+  // Sana va vaqtni formatlash
+  const formattedDate = `${hours}:${minutes} ${weekday} ${day}-${month}, ${year} yil`;
 
   // Xabarni boshqa botga yuborish
   try {
     await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
       chat_id: secondaryChatId,
-      text: message,
+      text: `📩 Xabar: ${message}\n🕒 Vaqt: ${formattedDate}`,
     });
   } catch (error) {
     console.error("❌ Xatolik yuz berdi:", error);
@@ -166,8 +186,4 @@ bot.on('text', async (ctx) => {
 
 // Botni ishga tushirish
 bot.launch();
-console.log('Bot ishga tushdi!');   
-
-
-
-
+console.log('Bot ishga tushdi432!');
