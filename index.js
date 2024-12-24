@@ -133,43 +133,45 @@ bot.on('callback_query', async (ctx) => {
   let productDetails = '';
   let productImage = '';
 
-  if (product === 'product_1') {
-    productDetails =
-      `Mahsulot 1: Qora sedana yog'i\n` +
-      `💊 Qora sedana (Habba Sauda) qadimiy davolovchi o'simlik bo'lib, uning shifobaxsh xususiyatlari ko‘p asrlar davomida qadrlangan.\n\n` +
-      `✅ Foydalari:\n` +
-      `- Immunitetni kuchaytiradi\n` +
-      `- Yallig‘lanishni kamaytiradi\n` +
-      `- Oshqozon-ichak muammolarini bartaraf etishga yordam beradi\n` +
-      `📍 Qur'oni Karim va hadislarda shifobaxsh ekani aytilgan.\n\n` +
-      `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
-      `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
-    productImage = 'https://images.uzum.uz/cjpdakbk9fq13g44r3o0/original.jpg';
-  } else if (product === 'product_2') {
-    productDetails =
-      `Mahsulot 2: Kist ul hindi\n` +
-      `💊 Kist ul hindi o‘simlik asalari mahsulotlaridan biri bo‘lib, tabobatda qadimdan ishlatiladi.\n\n` +
-      `✅ Foydalari:\n` +
-      `- Nafas olish tizimini qo‘llab-quvvatlaydi\n` +
-      `- Oqsil hazm qilishni yaxshilaydi\n` +
-      `- Immunitetni mustahkamlaydi\n\n` +
-      `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
-      `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
-    productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg#1734697230351';
-  } else if (product === 'product_3') {
-    productDetails =
-      `Mahsulot 3: Omega-3 kapsulalari\n` +
-      `💊 Omega-3 yog‘ kislotalari yurak salomatligini yaxshilovchi va ko‘plab muhim jarayonlarda yordam beruvchi moddalardir.\n\n` +
-      `✅ Foydalari:\n` +
-      `- Yurakni mustahkamlaydi\n` +
-      `- Miya faoliyatini yaxshilaydi\n` +
-      `- Qon bosimini me'yorlashtiradi\n` +
-      `- Ko‘z salomatligini qo‘llab-quvvatlaydi\n\n` +
-      `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
-      `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
-    productImage = 'https://images.uzum.uz/ci5hkal40v9pplt3ub3g/original.jpg';
-  }
-else if (product === 'product_5') {
+    if (product === 'product_1') {
+        productDetails =
+          `Mahsulot 1: Qora sedana yog'i\n` +
+          `💊 Qora sedana (Habba Sauda) qadimiy davolovchi o'simlik bo'lib, uning shifobaxsh xususiyatlari ko‘p asrlar davomida qadrlangan.\n\n` +
+          `✅ Foydalari:\n` +
+          `- Immunitetni kuchaytiradi\n` +
+          `- Yallig‘lanishni kamaytiradi\n` +
+          `- Oshqozon-ichak muammolarini bartaraf etishga yordam beradi\n` +
+          `📍 Qur'oni Karim va hadislarda shifobaxsh ekani aytilgan.\n\n` +
+          `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
+          `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
+        productImage = 'https://images.uzum.uz/cjpdakbk9fq13g44r3o0/original.jpg';
+      } else if (product === 'product_2') {
+        productDetails =
+          `Mahsulot 2: Kist ul hindi\n` +
+          `💊 Kist ul hindi o‘simlik asalari mahsulotlaridan biri bo‘lib, tabobatda qadimdan ishlatiladi.\n\n` +
+          `✅ Foydalari:\n` +
+          `- Nafas olish tizimini qo‘llab-quvvatlaydi\n` +
+          `- Oqsil hazm qilishni yaxshilaydi\n` +
+          `- Immunitetni mustahkamlaydi\n\n` +
+          `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
+          `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
+        productImage = 'https://frankfurt.apollo.olxcdn.com/v1/files/ltgpseprdwtu3-UZ/image';
+      } else if (product === 'product_3') {
+        productDetails =
+          `Mahsulot 3: Omega-3 kapsulalari\n` +
+          `💊 Omega-3 yog‘ kislotalari yurak salomatligini yaxshilovchi va ko‘plab muhim jarayonlarda yordam beruvchi moddalardir.\n\n` +
+          `✅ Foydalari:\n` +
+          `- Yurakni mustahkamlaydi\n` +
+          `- Miya faoliyatini yaxshilaydi\n` +
+          `- Qon bosimini me'yorlashtiradi\n` +
+          `- Ko‘z salomatligini qo‘llab-quvvatlaydi\n\n` +
+          `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
+          `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
+    
+        // Rasm manzili to'g'rilandi
+        productImage = 'https://images.uzum.uz/cgmmp7ng49devoacolb0/original.jpg';
+    }
+ else if (product === 'product_5') {
     for (const file of files) {
       if (file.endsWith('.ogg')) {
         // Agar fayl audio bo'lsa
@@ -182,7 +184,7 @@ else if (product === 'product_5') {
     return;
   } else if (product === 'product_6') {
     productDetails = `📞 +998 (55) 500-02-05`;
-    productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg#1734697230351';
+    productImageOmge = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS7uV73zlkIoevyU5dXmVByYlu7oOdJTly3mA&s';
   }
   
   try {
@@ -226,4 +228,4 @@ bot.on('text', async (ctx) => {
 
 // Botni ishga tushirish
 bot.launch();
-console.log('Bot ishga tushdie3!');
+console.log('Boterty!');
