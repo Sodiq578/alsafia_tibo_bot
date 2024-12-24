@@ -134,15 +134,42 @@ bot.on('callback_query', async (ctx) => {
   let productImage = '';
 
   if (product === 'product_1') {
-    productDetails = `Mahsulot 1: Qora sedana yog'i\n💰 Narxi: 150,000 so'm\n✅ Foydalari:\n- Immunitetni oshiradi\n- Terini va sochlarni mustahkamlaydi`;
+    productDetails =
+      `Mahsulot 1: Qora sedana yog'i\n` +
+      `💊 Qora sedana (Habba Sauda) qadimiy davolovchi o'simlik bo'lib, uning shifobaxsh xususiyatlari ko‘p asrlar davomida qadrlangan.\n\n` +
+      `✅ Foydalari:\n` +
+      `- Immunitetni kuchaytiradi\n` +
+      `- Yallig‘lanishni kamaytiradi\n` +
+      `- Oshqozon-ichak muammolarini bartaraf etishga yordam beradi\n` +
+      `📍 Qur'oni Karim va hadislarda shifobaxsh ekani aytilgan.\n\n` +
+      `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
+      `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
     productImage = 'https://images.uzum.uz/cjpdakbk9fq13g44r3o0/original.jpg';
   } else if (product === 'product_2') {
-    productDetails = `Mahsulot 2: Kist ul hindi\n💰 Narxi: 200,000 so'm\n✅ Foydalari:\n- Nafas olish tizimini qo'llab-quvvatlaydi\n- Oqsilni yaxshiroq hazm qiladi`;
+    productDetails =
+      `Mahsulot 2: Kist ul hindi\n` +
+      `💊 Kist ul hindi o‘simlik asalari mahsulotlaridan biri bo‘lib, tabobatda qadimdan ishlatiladi.\n\n` +
+      `✅ Foydalari:\n` +
+      `- Nafas olish tizimini qo‘llab-quvvatlaydi\n` +
+      `- Oqsil hazm qilishni yaxshilaydi\n` +
+      `- Immunitetni mustahkamlaydi\n\n` +
+      `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
+      `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
     productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg#1734697230351';
   } else if (product === 'product_3') {
-    productDetails = `Mahsulot 3: Omega-3 kapsulalari\n💰 Narxi: 180,000 so'm\n✅ Foydalari:\n- Yurakni mustahkamlaydi\n- Miya va ko'rish faoliyatini yaxshilaydi\n- Qon bosimini me'yorlashtiradi`;
+    productDetails =
+      `Mahsulot 3: Omega-3 kapsulalari\n` +
+      `💊 Omega-3 yog‘ kislotalari yurak salomatligini yaxshilovchi va ko‘plab muhim jarayonlarda yordam beruvchi moddalardir.\n\n` +
+      `✅ Foydalari:\n` +
+      `- Yurakni mustahkamlaydi\n` +
+      `- Miya faoliyatini yaxshilaydi\n` +
+      `- Qon bosimini me'yorlashtiradi\n` +
+      `- Ko‘z salomatligini qo‘llab-quvvatlaydi\n\n` +
+      `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
+      `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
     productImage = 'https://images.uzum.uz/ci5hkal40v9pplt3ub3g/original.jpg';
-  } else if (product === 'product_5') {
+  }
+else if (product === 'product_5') {
     for (const file of files) {
       if (file.endsWith('.ogg')) {
         // Agar fayl audio bo'lsa
@@ -199,4 +226,4 @@ bot.on('text', async (ctx) => {
 
 // Botni ishga tushirish
 bot.launch();
-console.log('Bot ishga tushdi3!');
+console.log('Bot ishga tushdie3!');
