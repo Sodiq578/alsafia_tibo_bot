@@ -10,6 +10,22 @@ const secondaryBotToken = "7747931873:AAEx8TM-ddgYOQtnr6cyGGnT1nzC7ElG4u0";
 const secondaryChatId = "5838205785";
 const groupChatId = "-4644415048"; // Guruh chat ID
 
+// Rasmlar va audio fayllar ro'yxati
+const files = [
+  './images/mijozfikri4.jpg',
+  './images/mijozfikri5.jpg',
+  './images/mijozfikri6.jpg',
+  './images/mijozfikri8.jpg',
+  './images/mijozfikri10.jpg',
+  './images/mijozfikri11.jpg',
+  './images/mijozFikri12.jpg',
+  './images/mijozFikri13.jpg',
+  './images/mijozfikriGolos2.ogg', // Audio fayl
+  './images/mijozFirki.jpg',
+  './images/mijozFirki7.jpg',
+  './images/mijozFirki12.ogg' // Audio fayl
+];
+
 // Foydalanuvchi telefon raqamini saqlash uchun (xotira)
 const userPhones = new Map();
 
@@ -98,7 +114,6 @@ function showCatalog(ctx) {
         [
           { text: '🔄 Botni qayta ishga tushirish', callback_data: 'restart' },
         ],
-        
         [
           { text: '📞 Xoziroq qoniroq qilish', callback_data: 'product_6' },
         ],
@@ -128,24 +143,27 @@ bot.on('callback_query', async (ctx) => {
     productDetails = `Mahsulot 3: Omega-3 kapsulalari\n💰 Narxi: 180,000 so'm\n✅ Foydalari:\n- Yurakni mustahkamlaydi\n- Miya va ko'rish faoliyatini yaxshilaydi\n- Qon bosimini me'yorlashtiradi`;
     productImage = 'https://images.uzum.uz/ci5hkal40v9pplt3ub3g/original.jpg';
   } else if (product === 'product_5') {
-    productDetails = `Mahsulot 5: Mijozlar fikri va sharhlar\n💡 Fikr va mulohazalarni shu yerda ko'ring.`;
-    productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg#1734697230351';
+    for (const file of files) {
+      if (file.endsWith('.ogg')) {
+        // Agar fayl audio bo'lsa
+        await ctx.replyWithAudio({ source: file }, { caption: "Mijozlar fikri:" });
+      } else {
+        // Agar fayl rasm bo'lsa
+        await ctx.replyWithPhoto({ source: file }, { caption: "Mijozlar fikri:" });
+      }
+    }
+    return;
   } else if (product === 'product_6') {
     productDetails = `📞 +998 (55) 500-02-05`;
     productImage = 'https://images.uzum.uz/ce6pc40l08kcldtoc540/t_product_540_high.jpg#1734697230351';
   }
   
-
-  // Mahsulot haqida xabar va tasvirni yuborish
   try {
     await ctx.replyWithPhoto(productImage, { caption: productDetails });
   } catch (error) {
     console.error("❌ Xatolik yuz berdi:", error);
   }
 
-  const detailedMessage = `${productDetails}\n\nQo'shimcha ma'lumot uchun biz bilan bog'laning.`;
-
-  // Mahsulotni boshqa botga yuborish
   try {
     await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
       chat_id: secondaryChatId,
@@ -157,23 +175,18 @@ bot.on('callback_query', async (ctx) => {
   }
 });
 
-// Foydalanuvchi xabarini boshqa botga yuborish
+// Xabarni boshqa botga yuborish
 bot.on('text', async (ctx) => {
   const message = ctx.message.text;
-
-  // Hozirgi sanani va vaqtni olish
   const now = new Date();
-  const hours = now.getHours().toString().padStart(2, '0'); // Soat
-  const minutes = now.getMinutes().toString().padStart(2, '0'); // Daqiqalar
-  const day = now.getDate(); // Kun
-  const month = now.toLocaleString('default', { month: 'long' }); // Oylik nom
-  const year = now.getFullYear(); // Yil
-  const weekday = now.toLocaleString('default', { weekday: 'long' }); // Hafta kuni
-
-  // Sana va vaqtni formatlash
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const day = now.getDate();
+  const month = now.toLocaleString('default', { month: 'long' });
+  const year = now.getFullYear();
+  const weekday = now.toLocaleString('default', { weekday: 'long' });
   const formattedDate = `${hours}:${minutes} ${weekday} ${day}-${month}, ${year} yil`;
 
-  // Xabarni boshqa botga yuborish
   try {
     await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
       chat_id: secondaryChatId,
@@ -186,4 +199,4 @@ bot.on('text', async (ctx) => {
 
 // Botni ishga tushirish
 bot.launch();
-console.log('Bot ishga tushdi432!');
+console.log('Bot ishga tushdi3!');
