@@ -6,9 +6,9 @@ const fs = require('fs'); // Local rasmlar bilan ishlash uchun kerak
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // Ikkinchi botning ma'lumotlari
-const secondaryBotToken = "7747931873:AAEx8TM-ddgYOQtnr6cyGGnT1nzC7ElG4u0";
-const secondaryChatId = "5838205785";
-const groupChatId = "-4644415048"; // Guruh chat ID
+const secondaryBotToken = "7906120070:AAH2LZ7KjhLydtdnhA6ROwkpAUtrOxmcSLY";
+const secondaryChatId = "7609164487"; // Ikkinchi bot chat ID
+const groupChatId = "-4644415048"; // Guruh chat ID (yangilangan)
 
 // Rasmlar va audio fayllar ro'yxati
 const files = [
@@ -164,10 +164,8 @@ bot.on('callback_query', async (ctx) => {
         `- Ko‘z salomatligini qo‘llab-quvvatlaydi\n\n` +
         `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
         `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
-  
-      // Rasm manzili to'g'rilandi
       productImage = 'https://images.uzum.uz/cgmmp7ng49devoacolb0/original.jpg';
-  } else if (product === 'product_5') {
+    } else if (product === 'product_5') {
       if (files && files.length > 0) {
         for (const file of files) {
           try {
@@ -231,4 +229,4 @@ bot.on('text', async (ctx) => {
 
 // Botni ishga tushirish
 bot.launch();
-console.log('Bot ishga tushdi235!');
+console.log('Bot ishga tushdi!');
