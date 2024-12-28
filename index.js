@@ -1,40 +1,77 @@
 require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const axios = require('axios');
-const fs = require('fs'); // Local rasmlar bilan ishlash uchun kerak
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // Ikkinchi botning ma'lumotlari
 const secondaryBotToken = "7906120070:AAH2LZ7KjhLydtdnhA6ROwkpAUtrOxmcSLY";
 const secondaryChatId = "7609164487"; // Ikkinchi bot chat ID
-const groupChatId = "-4644415048"; // Guruh chat ID (yangilangan)
+const groupChatId = "-4644415048"; // Guruh chat ID
 
-// Rasmlar va audio fayllar ro'yxati
-const files = [
-  './images/mijozfikri4.jpg',
-  './images/mijozfikri5.jpg',
-  './images/mijozfikri6.jpg',
-  './images/mijozfikri8.jpg',
-  './images/mijozfikri10.jpg',
-  './images/mijozfikri11.jpg',
-  './images/mijozFikri12.jpg',
-  './images/mijozFikri13.jpg',
-  './images/mijozFirki.jpg',
-  './images/mijozFirki7.jpg',
-  './images/mijozfikriGolos2.ogg', // Audio fayl
-  './images/mijozFirki12.ogg' // Audio fayl
+// Fayllar ro'yxati
+const filesGroup = [
+  ['./images/mijozfikri4.jpg', './images/mijozfikri5.jpg'],
+  ['./images/mijozfikri6.jpg', 'images/mijozFikir8.jpg', './images/mijozfikri10.jpg'],
+  ['./images/mijozfikri11.jpg', './images/rasimyangisi1.jpg', './images/mijozFikri13.jpg'],
 ];
 
-// Foydalanuvchi telefon raqamini saqlash uchun (xotira)
-const userPhones = new Map();
+let currentFeedbackIndex = 0; // Hozirgi fikrlar guruhi indeksi
+const userPhones = new Map(); // Telefon raqamlarini saqlash
+const userProductSelection = new Map(); // Foydalanuvchilar tanlagan mahsulotlar
+
+// Mahsulotlar haqida ma'lumot
+const products = {
+  product_1: {
+    title: "Qora Sedana",
+    description:
+      "💊 Qora sedana (Habba Sauda) qadimiy davolovchi o'simlik bo'lib, uning shifobaxsh xususiyatlari ko‘p asrlar davomida qadrlangan.\n\n✅ Foydalari:\n- Immunitetni kuchaytiradi\n- Yallig‘lanishni kamaytiradi\n- Oshqozon-ichak muammolarini bartaraf etishga yordam beradi\n📍 Qur'oni Karim va hadislarda shifobaxsh ekani aytilgan.\n\n📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! 👇",
+    phone: "+998555000205",
+    image: "https://images.uzum.uz/cjpdakbk9fq13g44r3o0/original.jpg",
+  },
+  product_2: {
+    title: "Kist ul hindi",
+    description:
+      "💊 Kist ul hindi o‘simlik asalari mahsulotlaridan biri bo‘lib, tabobatda qadimdan ishlatiladi.\n\n✅ Foydalari:\n- Nafas olish tizimini qo‘llab-quvvatlaydi\n- Oqsil hazm qilishni yaxshilaydi\n- Immunitetni mustahkamlaydi\n\n📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! 👇",
+    phone: "+998555000205",
+    image: "https://frankfurt.apollo.olxcdn.com/v1/files/ltgpseprdwtu3-UZ/image",
+  },
+  product_3: {
+    title: "Omega-3",
+    description:
+      "💊 Omega-3 yog‘ kislotalari yurak salomatligini yaxshilovchi va ko‘plab muhim jarayonlarda yordam beruvchi moddalardir.\n\n✅ Foydalari:\n- Yurakni mustahkamlaydi\n- Miya faoliyatini yaxshilaydi\n- Qon bosimini me'yorlashtiradi\n- Ko‘z salomatligini qo‘llab-quvvatlaydi\n\n📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! 👇",
+    phone: "+998555000205",
+    image: "https://images.uzum.uz/cgmmp7ng49devoacolb0/original.jpg",
+  },
+};
+
+// Asosiy menyu tugmalari
+function getMainMenuKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '📦 Qora Sedana', callback_data: 'product_1' },
+        { text: '📦 Kist ul hindi', callback_data: 'product_2' },
+      ],
+      [
+        { text: '📦 Omega 3', callback_data: 'product_3' },
+        { text: '📦 Mijozlar fikri', callback_data: 'feedback_start' },
+      ],
+      [
+        { text: "🌐 Bizning saytimizga o'tish", url: 'https://alsafiya.vercel.app/home' },
+      ],
+      [
+        { text: '🔄 Botni qayta ishga tushirish', callback_data: 'restart_bot' }
+      ]
+    ],
+  };
+}
 
 // /start buyrug'ini qayta ishlash
 bot.start((ctx) => {
   const userId = ctx.from.id;
 
   if (!userPhones.has(userId)) {
-    // Telefon raqami yo'q bo'lsa
     ctx.reply(
       `👋 Salom, ${ctx.from.first_name || 'Foydalanuvchi'}! Telefon raqamingizni jo'natish uchun quyidagi tugmani bosing.`,
       {
@@ -53,25 +90,22 @@ bot.start((ctx) => {
       }
     );
   } else {
-    // Telefon raqami allaqachon saqlangan bo'lsa
-    showCatalog(ctx);
+    ctx.reply('Asosiy menyuga xush kelibsiz!', { reply_markup: getMainMenuKeyboard() });
   }
 });
 
-// Telefon raqamini qabul qilish va boshqa botga yuborish
+// Telefon raqamini qabul qilish
 bot.on('contact', async (ctx) => {
   const userId = ctx.from.id;
   const contact = ctx.message.contact;
   const phoneNumber = contact.phone_number;
-  const firstName = contact.first_name || 'Foydalanuvchi';
 
   if (!userPhones.has(userId)) {
-    // Telefon raqamini saqlash
     userPhones.set(userId, phoneNumber);
 
-    const contactMessage = `📞 *Yangi kontakt*:\n*Ismi:* ${firstName}\n*Telefon raqam:* ${phoneNumber}`;
-    
-    // Raqamni boshqa botga yuborish
+
+    const contactMessage = `📞 *Yangi kontakt*:\n*Ismi:* ${contact.first_name}\n*Telefon raqam:* ${phoneNumber}`;
+
     try {
       await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
         chat_id: secondaryChatId,
@@ -81,152 +115,134 @@ bot.on('contact', async (ctx) => {
       ctx.reply("✅ Telefon raqamingiz tizimga muvaffaqiyatli qabul qilindi.");
     } catch (error) {
       console.error("❌ Xatolik yuz berdi:", error);
-      ctx.reply("❌ Telefon raqam tizimga yuborishda xatolik yuz berdi.");
+      ctx.reply("❌ Telefon raqamni yuborishda xatolik yuz berdi.");
     }
 
-    // Guruhga yuborish
     bot.telegram.sendMessage(groupChatId, contactMessage, { parse_mode: 'Markdown' });
-
-    // Katalogni ko'rsatish
-    showCatalog(ctx);
+    ctx.reply('Asosiy menyuga xush kelibsiz!', { reply_markup: getMainMenuKeyboard() });
   } else {
     ctx.reply("✅ Telefon raqamingiz allaqachon saqlangan.");
-    showCatalog(ctx);
   }
 });
 
-// Katalogni ko'rsatish
-function showCatalog(ctx) {
-  ctx.reply('Mahsulotlarimizni tanlang yoki "Qayta boshlash" tugmasidan foydalaning:', {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '📦 Qora Sedana', callback_data: 'product_1' },
-          { text: '📦 Kist ul hindi', callback_data: 'product_2' },
-        ],
-        [
-          { text: '📦 Omega 3', callback_data: 'product_3' },
-          { text: '📦 Mijozlar fikri', callback_data: 'product_5' },
-        ],
-        [
-          { text: '🌐 Bizning saytimiz', url: 'https://alsafiya.vercel.app/home' }, // Sayt tugmasi
-        ],
-        [
-          { text: '🔄 Botni qayta ishga tushirish', callback_data: 'restart' },
-        ],
-        [
-          { text: '📞 Xoziroq qoniroq qilish', callback_data: 'product_6' },
-        ],
-      ],
-    },
-  });
-}
-
-// Mahsulotni tanlash
+// Mahsulot tanlash va foydalanuvchining tanlovi haqida xabar yuborish
 bot.on('callback_query', async (ctx) => {
-  const product = ctx.callbackQuery.data;
-  console.log("Mahsulot tanlandi:", product);  // Debug: Mahsulotni tekshirib chiqing
-  
-  let productDetails = '';
-  let productImage = '';
-  try {
-    if (product === 'product_1') {
-      productDetails =
-        `Mahsulot 1: Qora sedana yog'i\n` +
-        `💊 Qora sedana (Habba Sauda) qadimiy davolovchi o'simlik bo'lib, uning shifobaxsh xususiyatlari ko‘p asrlar davomida qadrlangan.\n\n` +
-        `✅ Foydalari:\n` +
-        `- Immunitetni kuchaytiradi\n` +
-        `- Yallig‘lanishni kamaytiradi\n` +
-        `- Oshqozon-ichak muammolarini bartaraf etishga yordam beradi\n` +
-        `📍 Qur'oni Karim va hadislarda shifobaxsh ekani aytilgan.\n\n` +
-        `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
-        `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
-      productImage = 'https://images.uzum.uz/cjpdakbk9fq13g44r3o0/original.jpg';
-    } else if (product === 'product_2') {
-      productDetails =
-        `Mahsulot 2: Kist ul hindi\n` +
-        `💊 Kist ul hindi o‘simlik asalari mahsulotlaridan biri bo‘lib, tabobatda qadimdan ishlatiladi.\n\n` +
-        `✅ Foydalari:\n` +
-        `- Nafas olish tizimini qo‘llab-quvvatlaydi\n` +
-        `- Oqsil hazm qilishni yaxshilaydi\n` +
-        `- Immunitetni mustahkamlaydi\n\n` +
-        `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
-        `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
-      productImage = 'https://frankfurt.apollo.olxcdn.com/v1/files/ltgpseprdwtu3-UZ/image';
-    } else if (product === 'product_3') {
-      productDetails =
-        `Mahsulot 3: Omega-3 kapsulalari\n` +
-        `💊 Omega-3 yog‘ kislotalari yurak salomatligini yaxshilovchi va ko‘plab muhim jarayonlarda yordam beruvchi moddalardir.\n\n` +
-        `✅ Foydalari:\n` +
-        `- Yurakni mustahkamlaydi\n` +
-        `- Miya faoliyatini yaxshilaydi\n` +
-        `- Qon bosimini me'yorlashtiradi\n` +
-        `- Ko‘z salomatligini qo‘llab-quvvatlaydi\n\n` +
-        `📞 Bizda ishonchli va original mahsulot. Hozir buyurtma bering! ` +
-        `[Qo'ng'iroq qilish uchun bosish](tel:+998555000205)`;
-      productImage = 'https://images.uzum.uz/cgmmp7ng49devoacolb0/original.jpg';
-    } else if (product === 'product_5') {
-      if (files && files.length > 0) {
-        for (const file of files) {
-          try {
-            if (file.endsWith('.ogg')) {
-              // Agar fayl audio bo'lsa
-              await ctx.replyWithAudio({ source: file }, { caption: "Mijozlar fikri:" });
-            } else {
-              // Agar fayl rasm bo'lsa
-              await ctx.replyWithPhoto({ source: file }, { caption: "Mijozlar fikri:" });
-            }
-          } catch (error) {
-            console.error("❌ Fayl yuborishda xatolik:", error);
-          }
+  const action = ctx.callbackQuery.data;
+  const userId = ctx.from.id;
+
+  if (products[action]) {
+    const product = products[action];
+
+    // Foydalanuvchining tanlagan mahsulotini saqlash
+    userProductSelection.set(userId, product.title);
+
+    // Mahsulotni va foydalanuvchi ID raqamini ko'rsatish
+    const productMessage = `Foydalanuvchi ${ctx.from.first_name} (${userId}) mahsulotni tanladi: ${product.title}`;
+
+    // Tanlangan mahsulot haqida xabar yuborish
+    try {
+      await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
+        chat_id: secondaryChatId,
+        text: productMessage,
+        parse_mode: 'Markdown',
+      });
+
+      // Yuborilgan mahsulotning rasmi bilan birga xabar yuborish
+      await ctx.replyWithPhoto(product.image, {
+        caption: `Siz tanlagan mahsulot: ${product.title}\n\n${product.description}\n\n📞 Xoziroq sotib olish uchun qo'ng'iroq qiling: [${product.phone}](tel:${product.phone})`,
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🔙 Asosiy menyuga qaytish', callback_data: 'back_to_menu' }],
+            [{ text: "🌐 Bizning saytimizga o'tish", url: 'https://alsafiya.vercel.app/home' }],
+            [{ text: '🔄 Botni qayta ishga tushirish', callback_data: 'restart_bot' }]
+          ],
+        },
+      });
+    } catch (error) {
+      console.error("❌ Xatolik yuz berdi:", error);
+      ctx.reply("❌ Mahsulotni yuborishda xatolik yuz berdi.");
+    }
+  } else if (action === 'feedback_start') {
+    currentFeedbackIndex = 0;
+    await showFeedback(ctx);
+  } else if (action === 'feedback_next') {
+    if (currentFeedbackIndex < filesGroup.length - 1) {
+      currentFeedbackIndex++;
+      await showFeedback(ctx);
+    } else {
+      ctx.reply( "Hozircha boshqa fikrlar botga qo'shilmagan. Qo'shimcha ma'lumotlar kerak bo'lsa, bizga qo'ng'iroq qiling 😊 55 500 02 05.", {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🔙 Asosiy menyuga qaytish', callback_data: 'back_to_menu' }],
+            [{ text: "🌐 Bizning saytimizga o'tish", url: 'https://alsafiya.vercel.app/home' }],
+          ],
+        },
+      });
+    }
+  } else if (action === 'back_to_menu') {
+    ctx.reply('Asosiy menyuga qaytdingiz.', { reply_markup: getMainMenuKeyboard() });
+  } else if (action === 'restart_bot') {
+    ctx.reply("Botni qayta ishga tushirish uchun /start buyurigini bosing", { reply_markup: { inline_keyboard: [] } });
+    bot.stop('SIGINT');
+    bot.launch();
+  }
+});
+
+// Global o'zgaruvchi uchun oldingi fikrlarni saqlash
+let feedbackHistory = [];  // Bu arrayda foydalanuvchi ko'rgan fikrlar saqlanadi
+
+// Mahsulotlar va fikrlar haqida xabar yuborish
+async function showFeedback(ctx) {
+  const currentFiles = filesGroup[currentFeedbackIndex];
+
+  if (currentFiles && currentFiles.length > 0) {
+    try {
+      // O'tgan fikrlarni o'chirish
+      for (let message of feedbackHistory) {
+        try {
+          await ctx.deleteMessage(message.message_id);
+        } catch (error) {
+          console.error("Xabarni o'chirishda xatolik:", error);
         }
-      } else {
-        await ctx.reply("Hozircha mijozlar fikrlari mavjud emas.");
       }
-    } else if (product === 'product_6') {
-      productDetails = `📞 +998 (55) 500-02-05`;
-      productImage = 'https://cdn-icons-png.flaticon.com/512/3192/3192940.png'; // Telefon tasviri
+    } catch (error) {
+      console.error("Xabarlarni o'chirishda xatolik:", error);
     }
 
-    await ctx.replyWithPhoto(productImage, { caption: productDetails });
-  } catch (error) {
-    console.error("❌ Xatolik yuz berdi:", error);
-    ctx.reply("❌ Xatolik yuz berdi, iltimos, keyinroq qayta urinib ko'ring.");
-  }
 
-  try {
-    await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
-      chat_id: secondaryChatId,
-      text: `Mahsulot tanlandi:\n\n${productDetails}`,
-      parse_mode: 'Markdown',
+    // Yangi fikrlarni yuborish
+    const sentMessages = [];
+    for (const file of currentFiles) {
+      try {
+        const sentMessage = await ctx.replyWithPhoto({ source: file },  );
+        sentMessages.push(sentMessage);
+      } catch (error) {
+        console.error('Fayl yuborishda xatolik:', error);
+      }
+    }
+
+    // Yangi fikrlarni saqlash
+    feedbackHistory = sentMessages;
+
+    ctx.reply('Quyidagi tugmalardan birini tanlang:', {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Yana fikrlar', callback_data: 'feedback_next' }],
+          [{ text: '🔙 Asosiy menyuga qaytish', callback_data: 'back_to_menu' }],
+          [{ text: "🌐 Bizning saytimizga o'tish", url: 'https://alsafiya.vercel.app/home' }],
+        ],
+      },
     });
-  } catch (error) {
-    console.error("❌ Xatolik yuz berdi:", error);
+  } else {
+    ctx.reply(
+      "Hozircha boshqa fikrlar botga qo'shilmagan. Qo'shimcha ma'lumotlar kerak bo'lsa, bizga qo'ng'iroq qiling 😊 55 500 02 05.",
+      { reply_markup: getMainMenuKeyboard() }
+    );
+    
   }
-});
-
-// Xabarni boshqa botga yuborish
-bot.on('text', async (ctx) => {
-  const message = ctx.message.text;
-  const now = new Date();
-  const hours = now.getHours().toString().padStart(2, '0');
-  const minutes = now.getMinutes().toString().padStart(2, '0');
-  const day = now.getDate();
-  const month = now.toLocaleString('default', { month: 'long' });
-  const year = now.getFullYear();
-  const weekday = now.toLocaleString('default', { weekday: 'long' });
-  const formattedDate = `${hours}:${minutes} ${weekday} ${day}-${month}, ${year} yil`;
-
-  try {
-    await axios.post(`https://api.telegram.org/bot${secondaryBotToken}/sendMessage`, {
-      chat_id: secondaryChatId,
-      text: `📩 Xabar: ${message}\n🕒 Vaqt: ${formattedDate}`,
-    });
-  } catch (error) {
-    console.error("❌ Xatolik yuz berdi:", error);
-  }
-});
+}
 
 // Botni ishga tushirish
 bot.launch();
-console.log('Bot ishga tushdi!');
+console.log("Srdtfyg");
